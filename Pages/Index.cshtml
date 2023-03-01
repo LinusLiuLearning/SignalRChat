@@ -1,0 +1,83 @@
+﻿@page
+<select id="group">
+    <option>貓派</option>
+    <option>狗派</option>
+</select>
+<button type="button" id="addGroupBtn">加入群組</button>
+<br>
+    姓名：
+<input id="name" type="text">
+<br>
+    訊息
+<input id="msg" type="text">
+<br>
+<button type="Button" id="submitGroupBtn">送出給群組</button>
+<button type="Button" id="submitAllBtn">送出給所有人</button>
+<br>
+<div id="msgDiv"></div>
+
+<script src="~/js/signalr/dist/browser/signalr.js"></script>
+<script>
+    // 建立SignalR連接
+    var connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").build();
+    // 連接事件
+    connection.start().catch(function (err) {
+        return console.error(err.toString());
+    });
+
+    // 全頻道訊息
+    document.getElementById('submitAllBtn').addEventListener('click', function () {
+        var user = document.getElementById("name").value;
+        var message = document.getElementById("msg").value;
+        connection.invoke("SendMessage", user, message).catch(function (err) {
+            return console.error(err.toString());
+        });
+
+    })
+
+    // 全頻道訊息傳送訊息事件
+    connection.on("ReceiveMessage", function (user, message) {
+        var msg = `[全頻道訊息]${user}：${message}`;
+        var li = document.createElement("li");
+        li.textContent = msg;
+        document.getElementById("msgDiv").appendChild(li);
+    });
+
+    // 加入群組事件
+    document.getElementById("addGroupBtn").addEventListener("click", function (event) {
+        var user = document.getElementById("name").value;
+        var group = document.getElementById("group").value;
+        connection.invoke("AddGroup", group, user).catch(function (err) {
+            return console.error(err.toString());
+        });
+        event.preventDefault();
+    });
+
+    // 接收加入群組訊息
+    connection.on("RecAddGroupMsg", function (message) {
+        var msg = message;
+        var li = document.createElement("li");
+        li.textContent = msg;
+        document.getElementById("msgDiv").appendChild(li);
+    });
+
+    // 群組訊息Button事件
+    document.getElementById("submitGroupBtn").addEventListener("click", function (e) {
+        var user = document.getElementById("name").value;
+        var group = document.getElementById("group").value;
+        var message = document.getElementById("msg").value;
+        connection.invoke("SendMessageToGroup", group, user, message).catch(function (err) {
+            return console.error(err.toString());
+        });
+    });
+
+
+     //群組訊息接收事件
+    connection.on("ReceiveGroupMessage", function (groupName, user, message) {
+        console.log(user);
+        var msg = `[群組訊息(${groupName})]${user}：${message}`;
+        var li = document.createElement("li");
+        li.textContent = msg;
+        document.getElementById("msgDiv").appendChild(li);
+    });
+</script>
